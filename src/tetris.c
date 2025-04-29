@@ -193,64 +193,53 @@ struct piece pieces[] = {
 
 struct tetris tetris;
 
-static void init_pieces(struct piece *p) {
+static void calc_shape_mask(struct piece *p, int rot) {
+    for (int i = 0; i < p->rotations[rot].height; i++) {
+        uint16_t m = p->rotations[rot].shape[i] << 3;
+        for (int j = 0; j < COL; j++) {
+            p->rotations[rot].mask[j][i] = m;
+            m = m << 1;
+        }
+    }
+}
+
+static void init_pieces() {
     for (int i = 0; i < PIECE_TYPES; i++) {
         for (int j = 0; j < MAX_ROTATIONS; j++) {
+            calc_shape_mask(&pieces[i], j);
             for (int k = 0; k < MAX_BRICK_WIDTH; k++) {
-                p[i].rotations[j].solid[k] = 
-                    p[i].rotations[j].elevation[k] - p[i].rotations[j].concave[k];
+                pieces[i].rotations[j].solid[k] = 
+                    pieces[i].rotations[j].elevation[k] - pieces[i].rotations[j].concave[k];
             }
         }
     }
 }
 
-static void init_board(struct tetris *t) {
+
+static inline int calc_landing_row(struct tetris *t, struct piece *p, int rot, int col) {
+    int row = 0;  // 棋盘的最底行
+    for (int i = 0; i < p->rotations[rot].width; i++) {
+        int r =  t->col_height[col + i] - p->rotations[rot].concave[i];
+        if (r > row) {
+            row = r;
+        }
+    }
+
+    return row;
+}
+
+
+void init_tetris(struct tetris *t) {
+    srand(time(NULL)); // 初始化随机数种子
+    init_pieces();
+
     for (int i = 0; i < ROW; i++) {
         t->board[i] = EMPTY_ROW; // 初始化棋盘为空
     }
 }
 
-void init() {
-    srand(time(NULL)); // 初始化随机数种子
-    init_board(&tetris);
-    init_pieces(pieces);
-}
+int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
+    t->landing_row = calc_landing_row(t, p, rotation, col);
 
-void print_piece(struct piece *p) {
-    for (int i = 0; i < p->count; i++) {
-        printf("Rotation %d:\n", i);
-        printf("Width: %d, Height: %d\n", p->rotations[i].width, p->rotations[i].height);
-        for (int j = 0; j < p->rotations[i].width; j++) {
-            printf("Col: %d, Elevation: %d, Concave: %d, Solid: %d\n",
-                   j, 
-                   p->rotations[i].elevation[j], 
-                   p->rotations[i].concave[j], 
-                   p->rotations[i].solid[j]);
-        }
-        for (int j = p->rotations[i].height - 1; j >= 0; j--) {
-            for (int k = 0; k < p->rotations[i].width; k++) {
-                if (p->rotations[i].shape[j] & (1 << k)) {
-                    printf("%c", FULL_CHAR);
-                } else {
-                    printf("%c", EMPTY_CHAR);
-                }
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-}
-
-
-int get_holes(struct tetris *t) {
-    int holes = 0;
-    for (int i = 0; i < ROW; i++) {
-        uint16_t row = t->board[i];
-        for (int j = 0; j < COL; j++) {
-            if ((row & (1 << j)) == 0) { // 如果该位置为空
-                holes++;
-            }
-        }
-    }
-    return holes;
+    return 0;
 }

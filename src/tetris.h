@@ -26,6 +26,8 @@
 // 0 行是底部， 19 行是顶部
 struct tetris {
     uint16_t board[ROW];
+    uint8_t  col_height[COL];   // 每列的高度
+    uint8_t  landing_row;       // 最新一块方块的落点
 };
 
 struct rotation {
@@ -35,6 +37,7 @@ struct rotation {
     int elevation[MAX_BRICK_WIDTH];
     int concave[MAX_BRICK_WIDTH];
     int solid[MAX_BRICK_WIDTH];  // elevation = concave + solid
+    uint16_t mask[COL][MAX_BRICK_WIDTH];
 };
 
 struct piece {
@@ -42,8 +45,8 @@ struct piece {
     struct rotation rotations[MAX_ROTATIONS];
 };
 
-void init();
-void print_piece(struct piece *p);
+void init_tetris(struct tetris *t);
+    void print_piece(struct piece *p);
 int  get_holes(struct tetris *t);
 int get_row_transitions(int board[ROW][COL]);
 int get_col_transitions(int board[ROW][COL]);

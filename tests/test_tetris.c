@@ -2,8 +2,35 @@
 #include <CUnit/Basic.h>
 #include "../src/tetris.h"
 
+void print_piece(struct piece *p) {
+    for (int i = 0; i < p->count; i++) {
+        printf("Rotation %d:\n", i);
+        printf("Width: %d, Height: %d\n", p->rotations[i].width, p->rotations[i].height);
+        for (int j = 0; j < p->rotations[i].width; j++) {
+            printf("Col: %d, Elevation: %d, Concave: %d, Solid: %d\n",
+                   j, 
+                   p->rotations[i].elevation[j], 
+                   p->rotations[i].concave[j], 
+                   p->rotations[i].solid[j]);
+        }
+        for (int j = p->rotations[i].height - 1; j >= 0; j--) {
+            for (int k = 0; k < p->rotations[i].width; k++) {
+                if (p->rotations[i].shape[j] & (1 << k)) {
+                    printf("%c", FULL_CHAR);
+                } else {
+                    printf("%c", EMPTY_CHAR);
+                }
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
+
 void test_init() {
-    init();
+    struct tetris tetris;
+    init_tetris(&tetris);
 
     for (int i = 0; i < ROW; i++) {
         CU_ASSERT_EQUAL(tetris.board[i], EMPTY_ROW);

@@ -10,15 +10,12 @@ TEST_FILES = tests/test_tetris.c
 
 OBJ_FILES = $(SRC_FILES:.c=.o)
 TEST_OBJ_FILES = $(TEST_FILES:.c=.o)
-
-#tests/%.o: tests/%.c
-#	$(CC) $(CFLAGS) -c $< -o $@
-
+MAIN_OBJ = src/main.o
 
 all: $(TARGET)
 
-$(TARGET): $(OBJ_FILES)
-	$(CC) $(OBJ_FILES) -o $(TARGET)
+$(TARGET): $(OBJ_FILES) $(MAIN_OBJ)
+	$(CC) $(OBJ_FILES) $(MAIN_OBJ) -o $(TARGET)
 
 test: $(TEST_OBJ_FILES) $(OBJ_FILES)
 	$(CC) $(TEST_OBJ_FILES) $(OBJ_FILES) -o $(TEST_TARGET) $(LDFLAGS_TEST)
