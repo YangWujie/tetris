@@ -10,12 +10,12 @@
 
 
 // Pierre Dellacherie 算法评分权重
-#define WEIGHT_LANDING_HEIGHT   (-4.500158825082766)
-#define WEIGHT_ROWS_ELIMINATED  (3.4181268101392694)
-#define WEIGHT_ROW_TRANSITIONS  (-3.2178882868487753)
+#define WEIGHT_LANDING_HEIGHT     (-4.500158825082766)
+#define WEIGHT_ROWS_ELIMINATED    (3.4181268101392694)
+#define WEIGHT_ROW_TRANSITIONS    (-3.2178882868487753)
 #define WEIGHT_COLUMN_TRANSITIONS (-9.348695305445199)
-#define WEIGHT_HOLES            (-7.899265427351652)
-#define WEIGHT_WELL_SUMS        (-3.3855972247263626)
+#define WEIGHT_HOLES              (-7.899265427351652)
+#define WEIGHT_WELL_SUMS          (-3.3855972247263626)
 
 #define EMPTY_ROW   0B1110000000000111
 #define FULL_ROW    0B1111111111111111
@@ -28,13 +28,13 @@
 struct tetris {
     uint16_t pad;
     uint16_t board[ROW];
-    uint8_t  col_height[16];    // 每列的高度
-    uint8_t  max_height;        // 最高行
-    uint8_t  landing_row;       // 最新一块方块的落点
-    uint8_t  holes;             // 当前空洞数
-    uint8_t  row_transitions;   // 行转换数
-    uint8_t  col_transitions;   // 列转换数
-    uint8_t  wells;             // 井深度
+    int8_t  col_height[16];    // 每列的高度
+    int8_t  max_height;        // 最高行
+    int8_t  landing_row;       // 最新一块方块的落点
+    int8_t  holes;             // 当前空洞数
+    int8_t  row_transitions;   // 行转换数
+    int8_t  col_transitions;   // 列转换数
+    int8_t  wells;             // 井深度
 };
 
 struct rotation {
@@ -55,8 +55,9 @@ struct piece {
 };
 
 void init_tetris(struct tetris *t);
-void print_piece(struct piece *p);
-int place_piece(struct tetris *t, struct piece *p, int rotation, int col);
+int place_piece(struct tetris *t, const struct piece *p, int rotation, int col);
+void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col);
+void play_game_with_score();
 
 extern struct tetris tetris;
 extern struct piece pieces[];

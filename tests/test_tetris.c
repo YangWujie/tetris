@@ -71,7 +71,7 @@ void test_init() {
     print_piece(&pieces[6]);
 }
 
-void test_place_piece1() {
+void test_place_piece() {
     struct tetris tetris;
     init_tetris(&tetris);
 
@@ -157,6 +157,7 @@ void test_place_piece1() {
     place_piece(&tetris, &pieces[3], 1, 3);
     CU_ASSERT_EQUAL(tetris.landing_row, 2);
     CU_ASSERT_EQUAL(tetris.max_height, 3);
+    CU_ASSERT_EQUAL(tetris.col_height[6], 1);
     CU_ASSERT_EQUAL(tetris.wells, 4);
     CU_ASSERT_EQUAL(tetris.holes, 4);
     CU_ASSERT_EQUAL(tetris.row_transitions, 2);
@@ -201,27 +202,39 @@ void test_place_piece1() {
     CU_ASSERT_EQUAL(tetris.holes, 5);
     CU_ASSERT_EQUAL(tetris.row_transitions, 5);
     CU_ASSERT_EQUAL(tetris.col_transitions, 5);
-/*
+
     place_piece(&tetris, &pieces[0], 1, 6);
     CU_ASSERT_EQUAL(tetris.landing_row, 1);
     CU_ASSERT_EQUAL(tetris.max_height, 4);
-    CU_ASSERT_EQUAL(tetris.wells, 8);
-    CU_ASSERT_EQUAL(tetris.holes, 5);
-    CU_ASSERT_EQUAL(tetris.row_transitions, 5);
-    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
-*/
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 4);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 4);
+
+    place_piece(&tetris, &pieces[3], 2, 10);
+    CU_ASSERT_EQUAL(tetris.landing_row, 2);
+    CU_ASSERT_EQUAL(tetris.max_height, 3);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 3);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 3);
+
     print_board(&tetris);
     printf("wells: %d\n", tetris.wells);
     printf("holes: %d\n", tetris.holes);
     printf("col_transitions: %d\n", tetris.col_transitions);
     printf("row_transitions: %d\n", tetris.row_transitions);
+    for(int i = COL_SHIFT; i < COL + COL_SHIFT; i++) {
+        printf("col_height[%d]: %d\n", i, tetris.col_height[i]);
+    }
+    printf("max_height: %d\n", tetris.max_height);
 }
 
 int main() {
     CU_initialize_registry();
     CU_pSuite suite = CU_add_suite("Tetris Test Suite", NULL, NULL);
-//    CU_add_test(suite, "test_init", test_init);
-    CU_add_test(suite, "test_place_piece", test_place_piece1);
+    CU_add_test(suite, "test_init", test_init);
+    CU_add_test(suite, "test_place_piece", test_place_piece);
     CU_basic_run_tests();
     CU_cleanup_registry();
     return 0;

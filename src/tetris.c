@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <time.h> 
 #include <string.h>
+#include <stdbool.h>
 #include "tetris.h"
 
 // 得分规则
 const int SCORE_TABLE[] = {0, 100, 300, 500, 800};
+const char piece_names[PIECE_TYPES] = {'I', 'T', 'O', 'J', 'L', 'S', 'Z'};
 
 // 俄罗斯方块形状定义
 struct piece pieces[] = {
@@ -201,9 +203,6 @@ struct piece pieces[] = {
 };
 
 
-struct tetris tetris;
-
-
 static void init_pieces() {
     for (int i = 0; i < PIECE_TYPES; i++) {
         for (int j = 0; j < MAX_ROTATIONS; j++) {
@@ -250,7 +249,7 @@ static inline int get_status(struct tetris *t, int row, int col) {
     return (t->board[row] & (1 << col)); // 检查该位置是否有方块
 }
 
-static inline int calc_landing_row(struct tetris *t, struct rotation *rot, int col) {
+static inline int get_landing_row(struct tetris *t, const struct rotation *rot, int col) {
     int row = 0;  // 棋盘的最底行
     for (int i = 0; i < rot->width; i++) {
         int r =  t->col_height[col + i] - rot->vstart[i];
@@ -273,9 +272,17 @@ void init_tetris(struct tetris *t) {
     t->pad = FULL_ROW;    // 防止用-1作为下标访问board时越界
 }
 
-int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
-    struct rotation *rot = &p->rotations[rotation];
-    t->landing_row = calc_landing_row(t, rot, col);
+int get_piece_name(int piece) {
+    if (piece < 0 || piece >= PIECE_TYPES) {
+        return -1;
+    }
+    return piece_names[piece];
+}
+
+int place_piece(struct tetris *t, const struct piece *p, int rotation, int col) {
+    int rows_eliminated = 0;
+    const struct rotation *rot = &p->rotations[rotation];
+    t->landing_row = get_landing_row(t, rot, col);
 
     for(int i = 0; i < rot->height; i++) {
         int r = t->landing_row + i;
@@ -312,9 +319,7 @@ int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
             t->max_height = t->col_height[col + i];
         }
         int r = t->landing_row + rot->vstart[i] - 1;
-        printf("rot->vstart[%d]: %d, col: %d, r: %d\n", i, rot->vstart[i], col + i, r);
         int s = get_status(t, r, col + i);
-        printf("col: %d, row: %d, s: %d\n", col + i, r, s);
         if (s) {
             continue;
         }
@@ -334,6 +339,7 @@ int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
             }
             t->board[t->max_height - 1] = EMPTY_ROW;
             t->max_height--;
+            rows_eliminated++;
 
             for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
                 t->col_height[j]--;
@@ -341,20 +347,115 @@ int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
                 if (s1) {
                     continue;
                 }
-                int s2 = get_status(t, r - 1, j);
-                if (s2) {
-                    continue;
-                }
-                t->holes--;
-                int k = r - 2;
+                int k = r - 1;
                 while (get_status(t, k, j) == 0) {
+                    t->col_height[j]--;
                     t->holes--;
                     k--;
                 }
-                t->col_transitions--;
+                if (k != r - 1) {
+                    t->col_transitions--;
+                }
             }
         }
     }
 
-    return 0;
+    return rows_eliminated;
+}
+
+int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
+    static const int64_t LANDING_HEIGHT = (int64_t) WEIGHT_LANDING_HEIGHT * 10000;
+    static const int64_t HOLES = (int64_t) WEIGHT_HOLES * 10000;
+    static const int64_t ROW_TRANSITIONS = (int64_t) WEIGHT_ROW_TRANSITIONS * 20000;
+    static const int64_t COL_TRANSITIONS = (int64_t) WEIGHT_COLUMN_TRANSITIONS * 20000;
+    static const int64_t WELL_SUMS = (int64_t) WEIGHT_WELL_SUMS * 10000;
+    static const int64_t ROWS_ELIMINATED = (int64_t) WEIGHT_ROWS_ELIMINATED * 10000;
+
+    int64_t score = 0;
+    score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
+    score += (int64_t )t->landing_row * LANDING_HEIGHT;
+    score += (int64_t) t->col_transitions * COL_TRANSITIONS;
+    score += (int64_t) t->row_transitions * ROW_TRANSITIONS; 
+    score += (int64_t) t->wells * WELL_SUMS;
+    score += (int64_t) t->holes * HOLES;
+
+    return score;
+}
+
+void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col) {
+    int64_t best_score = INT64_MIN;
+    for (int j = 0; j < pieces[piece_index].count; j++) {
+        const struct rotation *rot = &pieces[piece_index].rotations[j];
+        for (int col = COL_SHIFT; col < COL_SHIFT + COL - rot->width + 1; col++) {
+            struct tetris temp_tetris;
+            memcpy(&temp_tetris, t, sizeof(struct tetris));
+            int rows_eliminated = place_piece(&temp_tetris, &pieces[piece_index], j, col);
+            int64_t score = evaluate_board(&temp_tetris, rows_eliminated);
+            if (score > best_score) {
+                best_score = score;
+                *best_rotation = j;
+                *best_col = col;
+            }
+        }
+    }
+}
+
+void print_board(const struct tetris *t) {
+    for (int i = ROW - 1; i >= 0; i--) {
+        for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
+            if (t->board[i] & (1 << j)) {
+                printf("%c", FULL_CHAR);
+            } else {
+                printf("%c", EMPTY_CHAR);
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void play_game() {
+    struct tetris t;
+    init_tetris(&t);
+    int step = 0;
+    while (1) {
+        int piece_index = rand() % PIECE_TYPES;
+        int best_rotation = 0, best_col = 0;
+        select_best_move(&t, piece_index, &best_rotation, &best_col);
+        printf("Piece %c, Rotation %d, Column %d\n", piece_names[piece_index], best_rotation, best_col);
+        place_piece(&t, &pieces[piece_index], best_rotation, best_col);
+        step++;
+        printf("Step %d: Piece %c\n", step, piece_names[piece_index]);
+        print_board(&t);
+        getchar();
+        if (t.max_height > 16) {
+            printf("Game over at step %d!\n", step);
+            break;
+        }
+    }
+}
+
+void play_game_with_score() {
+    struct tetris t;
+    init_tetris(&t);
+    int step = 0;
+    int total_score = 0;
+    int total_lines = 0;
+    while (1) {
+        int piece_index = rand() % PIECE_TYPES;
+        int best_rotation = 0, best_col = 0;
+        select_best_move(&t, piece_index, &best_rotation, &best_col);
+        int lines = place_piece(&t, &pieces[piece_index], best_rotation, best_col);
+        total_score += SCORE_TABLE[lines];
+        total_lines += lines;
+        step++;
+        printf("Step %d: Piece %c\n", step, piece_names[piece_index]);
+        print_board(&t);
+        printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
+        if (t.max_height > 16) {
+            printf("Game over at step %d!\n", step);
+            printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
+            break;
+        }
+    }
 }

@@ -1,8 +1,6 @@
 #include <tetris.h>
 
 int main() {
-    struct tetris tetris;
-    init_tetris(&tetris);
-    
+    play_game_with_score();
     return 0;
 }
