@@ -21,6 +21,11 @@ test: $(TEST_OBJ_FILES) $(OBJ_FILES)
 	$(CC) $(TEST_OBJ_FILES) $(OBJ_FILES) -o $(TEST_TARGET) $(LDFLAGS_TEST)
 	./$(TEST_TARGET)
 
+src/tetris.o: src/tetris.c src/tetris.h
+src/main.o: src/main.c src/tetris.h
+tests/test_tetris.o: tests/test_tetris.c src/tetris.h
+
+
 clean:
 	rm -f $(OBJ_FILES) $(TEST_OBJ_FILES) $(TARGET) $(TEST_TARGET)
 
