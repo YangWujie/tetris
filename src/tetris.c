@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h> 
+#include <string.h>
 #include "tetris.h"
 
 // 得分规则
@@ -209,6 +210,7 @@ static void init_pieces() {
             struct rotation *rot = &pieces[i].rotations[j];
             for (int k = 0; k < rot->height; k++) {
                 uint16_t s = rot->shape[k];
+                rot->hstart[k] = 0;
                 while ((s & 1) == 0) {
                     rot->hstart[k]++;
                     s = s >> 1;
@@ -223,6 +225,7 @@ static void init_pieces() {
             
             for (int k = 0; k < rot->width; k++) {
                 int v = 0;
+                rot->vstart[k] = 0;
                 while ((rot->shape[v] & (1 << k)) == 0) {
                     rot->vstart[k]++;
                     v++;
@@ -285,7 +288,9 @@ int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
         int s3 = get_status(t, r, c);
         int s4 = get_status(t, r, c + 1);
         if (s2 && s3) {
-            t->row_transitions--;
+            if (t->board[r] != FULL_ROW) {
+                t->row_transitions--;
+            }
             if (rot->hspan[i] == 1) {
                 t->wells--;
             }    
@@ -331,6 +336,7 @@ int place_piece(struct tetris *t, struct piece *p, int rotation, int col) {
             t->max_height--;
 
             for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
+                t->col_height[j]--;
                 int s1 = get_status(t, r, j);
                 if (s1) {
                     continue;

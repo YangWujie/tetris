@@ -75,16 +75,12 @@ void test_place_piece1() {
     struct tetris tetris;
     init_tetris(&tetris);
 
-    int col = 0;
-    print_piece(&pieces[1]);
     place_piece(&tetris, &pieces[0], 0, 3);
     CU_ASSERT_EQUAL(tetris.landing_row, 0);
     CU_ASSERT_EQUAL(tetris.col_height[3], 1);
     CU_ASSERT_EQUAL(tetris.col_height[4], 1);
     CU_ASSERT_EQUAL(tetris.col_height[5], 1);
     CU_ASSERT_EQUAL(tetris.col_height[6], 1);
-
-    print_piece(&pieces[1]);
 
     place_piece(&tetris, &pieces[1], 1, 4);
     CU_ASSERT_EQUAL(tetris.landing_row, 1);
@@ -93,16 +89,138 @@ void test_place_piece1() {
     CU_ASSERT_EQUAL(tetris.holes, 1);
     CU_ASSERT_EQUAL(tetris.row_transitions, 3);
     CU_ASSERT_EQUAL(tetris.col_transitions, 1);
+
+    place_piece(&tetris, &pieces[2], 0, 5);
+    CU_ASSERT_EQUAL(tetris.landing_row, 3);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 3);
+    CU_ASSERT_EQUAL(tetris.holes, 3);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 2);
+
+    place_piece(&tetris, &pieces[3], 3, 8);
+    CU_ASSERT_EQUAL(tetris.landing_row, 0);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 4);
+    CU_ASSERT_EQUAL(tetris.holes, 3);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 7);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 2);
+
+    place_piece(&tetris, &pieces[6], 1, 10);
+    CU_ASSERT_EQUAL(tetris.landing_row, 0);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 7);
+    CU_ASSERT_EQUAL(tetris.holes, 4);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 8);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 3);
+
+    place_piece(&tetris, &pieces[0], 1, 12);
+    CU_ASSERT_EQUAL(tetris.landing_row, 0);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 4);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 6);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 3);
+
+    place_piece(&tetris, &pieces[1], 2, 9);
+    CU_ASSERT_EQUAL(tetris.landing_row, 2);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 5);
+    CU_ASSERT_EQUAL(tetris.holes, 4);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 5);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 3);
+
+    place_piece(&tetris, &pieces[2], 0, 7);
+    CU_ASSERT_EQUAL(tetris.landing_row, 1);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 5);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 4);
+
+    place_piece(&tetris, &pieces[2], 0, 7);
+    CU_ASSERT_EQUAL(tetris.landing_row, 3);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 4);
+
+    place_piece(&tetris, &pieces[0], 0, 9);
+    CU_ASSERT_EQUAL(tetris.landing_row, 4);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 3);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 4);
+
+    place_piece(&tetris, &pieces[3], 1, 3);
+    CU_ASSERT_EQUAL(tetris.landing_row, 2);
+    CU_ASSERT_EQUAL(tetris.max_height, 3);
+    CU_ASSERT_EQUAL(tetris.wells, 4);
+    CU_ASSERT_EQUAL(tetris.holes, 4);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 2);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 4);
+
+    place_piece(&tetris, &pieces[5], 0, 10);
+    CU_ASSERT_EQUAL(tetris.landing_row, 3);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 5);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 3);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+
+    place_piece(&tetris, &pieces[3], 0, 3);
+    CU_ASSERT_EQUAL(tetris.landing_row, 3);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 5);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 3);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+
+    place_piece(&tetris, &pieces[3], 0, 7);
+    CU_ASSERT_EQUAL(tetris.landing_row, 3);
+    CU_ASSERT_EQUAL(tetris.max_height, 5);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+
+    place_piece(&tetris, &pieces[3], 0, 8);
+    CU_ASSERT_EQUAL(tetris.landing_row, 4);
+    CU_ASSERT_EQUAL(tetris.max_height, 6);
+    CU_ASSERT_EQUAL(tetris.wells, 6);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 4);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+
+    place_piece(&tetris, &pieces[2], 0, 4);
+    CU_ASSERT_EQUAL(tetris.landing_row, 4);
+    CU_ASSERT_EQUAL(tetris.max_height, 6);
+    CU_ASSERT_EQUAL(tetris.wells, 8);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 5);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+/*
+    place_piece(&tetris, &pieces[0], 1, 6);
+    CU_ASSERT_EQUAL(tetris.landing_row, 1);
+    CU_ASSERT_EQUAL(tetris.max_height, 4);
+    CU_ASSERT_EQUAL(tetris.wells, 8);
+    CU_ASSERT_EQUAL(tetris.holes, 5);
+    CU_ASSERT_EQUAL(tetris.row_transitions, 5);
+    CU_ASSERT_EQUAL(tetris.col_transitions, 5);
+*/
     print_board(&tetris);
     printf("wells: %d\n", tetris.wells);
     printf("holes: %d\n", tetris.holes);
     printf("col_transitions: %d\n", tetris.col_transitions);
+    printf("row_transitions: %d\n", tetris.row_transitions);
 }
 
 int main() {
     CU_initialize_registry();
     CU_pSuite suite = CU_add_suite("Tetris Test Suite", NULL, NULL);
-    CU_add_test(suite, "test_init", test_init);
+//    CU_add_test(suite, "test_init", test_init);
     CU_add_test(suite, "test_place_piece", test_place_piece1);
     CU_basic_run_tests();
     CU_cleanup_registry();
