@@ -59,5 +59,4 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col);
 void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col);
 void play_game_with_score();
 
-extern struct tetris tetris;
 extern struct piece pieces[];

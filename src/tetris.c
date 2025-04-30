@@ -400,6 +400,45 @@ void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int
     }
 }
 
+void select_best_move_with_next(
+    struct tetris *t,
+    int curr_piece_index,
+    int next_piece_index,
+    int *best_rotation,
+    int *best_col
+) {
+    int64_t best_score = INT64_MIN;
+    for (int j = 0; j < pieces[curr_piece_index].count; j++) {
+        const struct rotation *rot = &pieces[curr_piece_index].rotations[j];
+        for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
+            struct tetris temp_tetris;
+            memcpy(&temp_tetris, t, sizeof(struct tetris));
+            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col);
+            int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
+
+            int64_t next_best = INT64_MIN;
+            for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
+                const struct rotation *nrot = &pieces[next_piece_index].rotations[nj];
+                for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
+                    struct tetris next_tetris;
+                    memcpy(&next_tetris, &temp_tetris, sizeof(struct tetris));
+                    int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol);
+                    int64_t score = evaluate_board(&next_tetris, nlines_cleared);
+                    if (score > next_best) {
+                        next_best = score;
+                    }
+                }
+            }
+            int64_t total_score = curr_score + next_best;
+            if (total_score > best_score) {
+                best_score = total_score;
+                *best_rotation = j;
+                *best_col = col;
+            }
+        }
+    }
+}
+
 void print_board(const struct tetris *t) {
     for (int i = ROW - 1; i >= 0; i--) {
         for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
@@ -414,48 +453,30 @@ void print_board(const struct tetris *t) {
     printf("\n");
 }
 
-void play_game() {
-    struct tetris t;
-    init_tetris(&t);
-    int step = 0;
-    while (1) {
-        int piece_index = rand() % PIECE_TYPES;
-        int best_rotation = 0, best_col = 0;
-        select_best_move(&t, piece_index, &best_rotation, &best_col);
-        printf("Piece %c, Rotation %d, Column %d\n", piece_names[piece_index], best_rotation, best_col);
-        place_piece(&t, &pieces[piece_index], best_rotation, best_col);
-        step++;
-        printf("Step %d: Piece %c\n", step, piece_names[piece_index]);
-        print_board(&t);
-        getchar();
-        if (t.max_height > 16) {
-            printf("Game over at step %d!\n", step);
-            break;
-        }
-    }
-}
-
 void play_game_with_score() {
     struct tetris t;
     init_tetris(&t);
     int step = 0;
     int total_score = 0;
     int total_lines = 0;
+    int curr_piece = rand() % PIECE_TYPES;
+    int next_piece = rand() % PIECE_TYPES;
     while (1) {
-        int piece_index = rand() % PIECE_TYPES;
         int best_rotation = 0, best_col = 0;
-        select_best_move(&t, piece_index, &best_rotation, &best_col);
-        int lines = place_piece(&t, &pieces[piece_index], best_rotation, best_col);
+        select_best_move_with_next(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col);
         total_score += SCORE_TABLE[lines];
         total_lines += lines;
         step++;
-        printf("Step %d: Piece %c\n", step, piece_names[piece_index]);
+        printf("Step %d: Piece %c\n", step, piece_names[curr_piece]);
         print_board(&t);
         printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
-        if (t.max_height > 16) {
+        if (t.max_height > 18) {
             printf("Game over at step %d!\n", step);
             printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
             break;
         }
+        curr_piece = next_piece;
+        next_piece = rand() % PIECE_TYPES;
     }
 }
