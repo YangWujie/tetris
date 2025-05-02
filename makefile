@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g -I./src -I/usr/local/include
+CFLAGS = -Wall -g -O2 -I./src -I/usr/local/include
 LDFLAGS_TEST = -L/usr/local/lib -lcunit
 
 TARGET = tetris

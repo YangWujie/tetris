@@ -439,20 +439,12 @@ void select_best_move_with_next(
                     }
                 }
             }
-/*
-            int64_t total_score = curr_score + next_best;
+            int64_t total_score = bonus + next_best;
             if (total_score > best_score) {
                 best_score = total_score;
                 *best_rotation = j;
                 *best_col = col;
             }
-*/
-int64_t total_score = bonus + next_best;
-if (total_score > best_score) {
-    best_score = total_score;
-    *best_rotation = j;
-    *best_col = col;
-}
 
         }
     }
@@ -488,7 +480,7 @@ void print_piece(const struct piece *p, int rotation) {
 }
 
 
-#define BEAM_WIDTH 4
+#define BEAM_WIDTH 6
 
 struct BeamNode {
     struct tetris t;
@@ -555,6 +547,14 @@ void select_best_move_with_next_beam(
             }
         }
         int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT + (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
+        if (beam[i].landing_row > 8) {
+            bonus *= 130;
+            bonus /= 100;
+        }
+        else {
+            bonus *= 40;
+            bonus /= 100;
+        }
         int64_t total_score = bonus + next_best;
         if (total_score > best_total_score) {
             best_total_score = total_score;
