@@ -6,8 +6,6 @@
 #include "tetris.h"
 #include "print_utils.h"
 
-// 得分规则
-const int SCORE_TABLE[] = {0, 100, 300, 500, 800};
 const char piece_names[PIECE_TYPES] = {'I', 'T', 'O', 'J', 'L', 'S', 'Z'};
 
 static const int64_t LANDING_HEIGHT = (int64_t) (WEIGHT_LANDING_HEIGHT * 10000);
@@ -529,37 +527,3 @@ void select_best_move_with_next_beam(
         }
     }
 }
-
-void play_game() {
-    struct tetris t;
-    init_tetris(&t);
-    int step = 0;
-    int total_score = 0;
-    int total_lines = 0;
-    int curr_piece = rand() % PIECE_TYPES;
-    int next_piece = rand() % PIECE_TYPES;
-    clock_t start_time = clock();
-    while (1) {
-        int best_rotation = 0, best_col = 0, landing_row = 0;
-        select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
-        print_pieces_side_by_side(best_col - 1, &pieces[curr_piece], best_rotation, &pieces[next_piece], 0);
-        print_board(&t);
-        printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
-        getchar();
-        int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col, &landing_row);
-        total_score += SCORE_TABLE[lines];
-        total_lines += lines;
-        step++;
-        if (t.max_height > 16 || step >= 1000000) {
-            printf("Game over at step %d!\n", step);
-            printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
-            break;
-            }
-            curr_piece = next_piece;
-            next_piece = rand() % PIECE_TYPES;
-        }
-    clock_t end_time = clock();
-    double elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
-    printf("Total elapsed time: %.3f seconds\n", elapsed);
-}
-
