@@ -385,7 +385,7 @@ int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
     score += (int64_t) t->wells * WELL_SUMS;
     score += (int64_t) t->holes * HOLES;
 
-    if (t->max_height > 9) {
+    if (t->max_height > 10) {
         score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
         score += (int64_t )t->landing_row * LANDING_HEIGHT;
     }
@@ -556,7 +556,7 @@ void select_best_move_with_next_beam(
             bonus /= 100;
         }
         else {
-            bonus *= -10;
+            bonus *= -22;
             bonus /= 100;
         }
 
