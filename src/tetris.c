@@ -385,6 +385,11 @@ int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
     score += (int64_t) t->wells * WELL_SUMS;
     score += (int64_t) t->holes * HOLES;
 
+    if (t->max_height > 9) {
+        score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
+        score += (int64_t )t->landing_row * LANDING_HEIGHT;
+    }
+
     return score;
 }
 
@@ -423,7 +428,6 @@ void select_best_move_with_next(
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
             int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
-            // int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
             int64_t bonus = (int64_t) landing_row * LANDING_HEIGHT + (int64_t) lines_cleared * ROWS_ELIMINATED;
 
             int64_t next_best = INT64_MIN;
@@ -547,14 +551,15 @@ void select_best_move_with_next_beam(
             }
         }
         int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT + (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
-        if (beam[i].landing_row > 8) {
-            bonus *= 130;
+        if (beam[i].landing_row > 4) {
+            bonus *= 120;
             bonus /= 100;
         }
         else {
-            bonus *= 40;
+            bonus *= -10;
             bonus /= 100;
         }
+
         int64_t total_score = bonus + next_best;
         if (total_score > best_total_score) {
             best_total_score = total_score;
@@ -593,11 +598,17 @@ void play_game() {
         printf("Best position info: ");
         printf("holes=%d, col_transitions=%d, row_transitions=%d, wells=%d, max_height=%d\n", t.holes, t.col_transitions, t.row_transitions, t.wells, t.max_height);
         getchar();
-*/
+
         if (t.max_height > 16 || step >= 1000000) {
             printf("Game over at step %d!\n", step);
             printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
             break;
+        }
+        */
+    if (t.max_height > 16 || step >= 1000000) {
+        printf("Game over at step %d!\n", step);
+        printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
+        break;
         }
         curr_piece = next_piece;
         next_piece = rand() % PIECE_TYPES;
