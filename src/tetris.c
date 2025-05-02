@@ -9,6 +9,14 @@
 const int SCORE_TABLE[] = {0, 100, 300, 500, 800};
 const char piece_names[PIECE_TYPES] = {'I', 'T', 'O', 'J', 'L', 'S', 'Z'};
 
+static const int64_t LANDING_HEIGHT = (int64_t) (WEIGHT_LANDING_HEIGHT * 10000);
+static const int64_t HOLES = (int64_t) (WEIGHT_HOLES * 10000);
+static const int64_t ROW_TRANSITIONS = (int64_t) (WEIGHT_ROW_TRANSITIONS * 10000);
+static const int64_t COL_TRANSITIONS = (int64_t) (WEIGHT_COLUMN_TRANSITIONS * 10000);
+static const int64_t WELL_SUMS = (int64_t) (WEIGHT_WELL_SUMS * 10000);
+static const int64_t ROWS_ELIMINATED = (int64_t) (WEIGHT_ROWS_ELIMINATED * 10000);
+
+
 // 俄罗斯方块形状定义
 struct piece pieces[] = {
     // I
@@ -269,7 +277,8 @@ void init_tetris(struct tetris *t) {
     for (int i = 0; i < ROW; i++) {
         t->board[i] = EMPTY_ROW; // 初始化棋盘为空
     }
-    t->pad = FULL_ROW;    // 防止用-1作为下标访问board时越界
+    t->pad0 = FULL_ROW;    // 防止用-1作为下标访问board时越界
+    t->pad1 = FULL_ROW;    // 防止用ROW作为下标访问board时越界
 }
 
 int get_piece_name(int piece) {
@@ -279,16 +288,17 @@ int get_piece_name(int piece) {
     return piece_names[piece];
 }
 
-int place_piece(struct tetris *t, const struct piece *p, int rotation, int col) {
+int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, int *landing_row) {
     int rows_eliminated = 0;
     const struct rotation *rot = &p->rotations[rotation];
     t->landing_row = get_landing_row(t, rot, col);
+    *landing_row = t->landing_row;
 
     for(int i = 0; i < rot->height; i++) {
         int r = t->landing_row + i;
         int c = col + rot->hstart[i];
         t->board[r] |= (rot->shape[i] << col);
-        //   s1 s2 XXX s3 s4
+        //   s1 s2 XXX s3 s4    
         int s1 = get_status(t, r, c - 2);
         int s2 = get_status(t, r, c - 1);
         c += rot->hspan[i];
@@ -363,19 +373,10 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col) 
         }
     }
 
-    t->col_height[15] = rows_eliminated; // 调试用
-
     return rows_eliminated;
 }
 
 int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
-    static const int64_t LANDING_HEIGHT = (int64_t) (WEIGHT_LANDING_HEIGHT * 10000);
-    static const int64_t HOLES = (int64_t) (WEIGHT_HOLES * 10000);
-    static const int64_t ROW_TRANSITIONS = (int64_t) (WEIGHT_ROW_TRANSITIONS * 20000);
-    static const int64_t COL_TRANSITIONS = (int64_t) (WEIGHT_COLUMN_TRANSITIONS * 20000);
-    static const int64_t WELL_SUMS = (int64_t) (WEIGHT_WELL_SUMS * 10000);
-    static const int64_t ROWS_ELIMINATED = (int64_t) (WEIGHT_ROWS_ELIMINATED * 10000);
-
     int64_t score = 0;
     score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
     score += (int64_t )t->landing_row * LANDING_HEIGHT;
@@ -389,12 +390,13 @@ int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
 
 void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col) {
     int64_t best_score = INT64_MIN;
+    int landing_row = 0;
     for (int j = 0; j < pieces[piece_index].count; j++) {
         const struct rotation *rot = &pieces[piece_index].rotations[j];
         for (int col = COL_SHIFT; col < COL_SHIFT + COL - rot->width + 1; col++) {
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
-            int rows_eliminated = place_piece(&temp_tetris, &pieces[piece_index], j, col);
+            int rows_eliminated = place_piece(&temp_tetris, &pieces[piece_index], j, col, &landing_row);
             int64_t score = evaluate_board(&temp_tetris, rows_eliminated);
             if (score > best_score) {
                 best_score = score;
@@ -414,13 +416,15 @@ void select_best_move_with_next(
     int *best_col
 ) {
     int64_t best_score = INT64_MIN;
+    int landing_row = 0;
     for (int j = 0; j < pieces[curr_piece_index].count; j++) {
         const struct rotation *rot = &pieces[curr_piece_index].rotations[j];
         for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
-            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col);
-            int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
+            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
+            // int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
+            int64_t bonus = (int64_t) landing_row * LANDING_HEIGHT + (int64_t) lines_cleared * ROWS_ELIMINATED;
 
             int64_t next_best = INT64_MIN;
             for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
@@ -428,19 +432,28 @@ void select_best_move_with_next(
                 for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
                     struct tetris next_tetris;
                     memcpy(&next_tetris, &temp_tetris, sizeof(struct tetris));
-                    int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol);
+                    int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol, &landing_row);
                     int64_t score = evaluate_board(&next_tetris, nlines_cleared);
                     if (score > next_best) {
                         next_best = score;
                     }
                 }
             }
+/*
             int64_t total_score = curr_score + next_best;
             if (total_score > best_score) {
                 best_score = total_score;
                 *best_rotation = j;
                 *best_col = col;
             }
+*/
+int64_t total_score = bonus + next_best;
+if (total_score > best_score) {
+    best_score = total_score;
+    *best_rotation = j;
+    *best_col = col;
+}
+
         }
     }
 }
@@ -475,7 +488,83 @@ void print_piece(const struct piece *p, int rotation) {
 }
 
 
-void play_game_with_score() {
+#define BEAM_WIDTH 4
+
+struct BeamNode {
+    struct tetris t;
+    int rotation;
+    int col;
+    int64_t score;
+    int landing_row;
+    int lines_cleared;
+};
+
+void select_best_move_with_next_beam(
+    struct tetris *t,
+    int curr_piece_index,
+    int next_piece_index,
+    int *best_rotation,
+    int *best_col
+) {
+    struct BeamNode beam[BEAM_WIDTH];
+    int beam_size = 0;
+
+    // 1. 枚举所有当前方块的落子方式，保留前BEAM_WIDTH个
+    for (int j = 0; j < pieces[curr_piece_index].count; j++) {
+        const struct rotation *rot = &pieces[curr_piece_index].rotations[j];
+        for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
+            struct tetris temp_tetris;
+            memcpy(&temp_tetris, t, sizeof(struct tetris));
+            int landing_row = 0;
+            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
+            int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
+
+            // 插入beam数组，按分数从大到小排序，保留前BEAM_WIDTH个
+            int insert_pos = beam_size;
+            while (insert_pos > 0 && beam[insert_pos-1].score < curr_score) {
+                if (insert_pos < BEAM_WIDTH) beam[insert_pos] = beam[insert_pos-1];
+                insert_pos--;
+            }
+            if (insert_pos < BEAM_WIDTH) {
+                beam[insert_pos].t = temp_tetris;
+                beam[insert_pos].rotation = j;
+                beam[insert_pos].col = col;
+                beam[insert_pos].score = curr_score;
+                beam[insert_pos].landing_row = landing_row;
+                beam[insert_pos].lines_cleared = lines_cleared;
+                if (beam_size < BEAM_WIDTH) beam_size++;
+            }
+        }
+    }
+
+    // 2. 对每个beam节点，枚举下一个方块所有落子，取最优
+    int64_t best_total_score = INT64_MIN;
+    for (int i = 0; i < beam_size; i++) {
+        int64_t next_best = INT64_MIN;
+        for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
+            const struct rotation *nrot = &pieces[next_piece_index].rotations[nj];
+            for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
+                struct tetris next_tetris;
+                memcpy(&next_tetris, &beam[i].t, sizeof(struct tetris));
+                int landing_row = 0;
+                int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol, &landing_row);
+                int64_t score = evaluate_board(&next_tetris, nlines_cleared);
+                if (score > next_best) {
+                    next_best = score;
+                }
+            }
+        }
+        int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT + (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
+        int64_t total_score = bonus + next_best;
+        if (total_score > best_total_score) {
+            best_total_score = total_score;
+            *best_rotation = beam[i].rotation;
+            *best_col = beam[i].col;
+        }
+    }
+}
+
+void play_game() {
     struct tetris t;
     init_tetris(&t);
     int step = 0;
@@ -485,9 +574,9 @@ void play_game_with_score() {
     int next_piece = rand() % PIECE_TYPES;
     clock_t start_time = clock();
     while (1) {
-        int best_rotation = 0, best_col = 0;
-        select_best_move_with_next(&t, curr_piece, next_piece, &best_rotation, &best_col);
-        int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col);
+        int best_rotation = 0, best_col = 0, landing_row = 0;
+        select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col, &landing_row);
         total_score += SCORE_TABLE[lines];
         total_lines += lines;
         step++;
@@ -503,6 +592,7 @@ void play_game_with_score() {
         printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
         printf("Best position info: ");
         printf("holes=%d, col_transitions=%d, row_transitions=%d, wells=%d, max_height=%d\n", t.holes, t.col_transitions, t.row_transitions, t.wells, t.max_height);
+        getchar();
 */
         if (t.max_height > 16 || step >= 1000000) {
             printf("Game over at step %d!\n", step);
@@ -516,3 +606,4 @@ void play_game_with_score() {
     double elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("Total elapsed time: %.3f seconds\n", elapsed);
 }
+

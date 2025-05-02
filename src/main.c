@@ -1,6 +1,6 @@
 #include <tetris.h>
 
 int main() {
-    play_game_with_score();
+    play_game();
     return 0;
 }
