@@ -1,3 +1,6 @@
+#ifndef TETRIS_H
+#define TETRIS_H
+
 #include <stdint.h>
 
 #define ROW 20
@@ -8,6 +11,7 @@
 #define EMPTY_CHAR      '.'
 #define FULL_CHAR       'X'
 
+#define BEAM_WIDTH 6
 
 // Pierre Dellacherie 算法评分权重
 #define WEIGHT_LANDING_HEIGHT     (-4.500158825082766)
@@ -57,9 +61,20 @@ struct piece {
     struct rotation rotations[MAX_ROTATIONS];
 };
 
+struct BeamNode {
+    struct tetris t;
+    int rotation;
+    int col;
+    int64_t score;
+    int landing_row;
+    int lines_cleared;
+};
+
 void init_tetris(struct tetris *t);
 void play_game();
 void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col);
 int  place_piece(struct tetris *t, const struct piece *p, int rotation, int col, int *landing_row);
 
 extern struct piece pieces[];
+
+#endif // TETRIS_H

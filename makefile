@@ -5,7 +5,7 @@ LDFLAGS_TEST = -L/usr/local/lib -lcunit
 TARGET = tetris
 TEST_TARGET = test_tetris
 
-SRC_FILES = src/tetris.c
+SRC_FILES = src/tetris.c src/print_utils.c
 TEST_FILES = tests/test_tetris.c
 
 OBJ_FILES = $(SRC_FILES:.c=.o)

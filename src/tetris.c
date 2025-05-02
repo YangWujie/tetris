@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "tetris.h"
+#include "print_utils.h"
 
 // 得分规则
 const int SCORE_TABLE[] = {0, 100, 300, 500, 800};
@@ -455,46 +456,6 @@ void select_best_move_with_next(
 }
 
 
-void print_board(const struct tetris *t) {
-    for (int i = ROW - 1; i >= 0; i--) {
-        for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
-            if (t->board[i] & (1 << j)) {
-                printf("%c", FULL_CHAR);
-            } else {
-                printf("%c", EMPTY_CHAR);
-            }
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void print_piece(const struct piece *p, int rotation) {
-    const struct rotation *rot = &p->rotations[rotation];
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            if (i < rot->height && j < rot->width && (rot->shape[i] & (1 << j))) {
-                putchar('*');
-            } else {
-                putchar('.');
-            }
-        }
-        putchar('\n');
-    }
-}
-
-
-#define BEAM_WIDTH 6
-
-struct BeamNode {
-    struct tetris t;
-    int rotation;
-    int col;
-    int64_t score;
-    int landing_row;
-    int lines_cleared;
-};
-
 void select_best_move_with_next_beam(
     struct tetris *t,
     int curr_piece_index,
@@ -581,38 +542,22 @@ void play_game() {
     while (1) {
         int best_rotation = 0, best_col = 0, landing_row = 0;
         select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        print_pieces_side_by_side(best_col - 1, &pieces[curr_piece], best_rotation, &pieces[next_piece], 0);
+        print_board(&t);
+        printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
+        getchar();
         int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col, &landing_row);
         total_score += SCORE_TABLE[lines];
         total_lines += lines;
         step++;
-/*
-        printf("Step %d: Piece %c Best rotation %d\n", step, piece_names[curr_piece], best_rotation);
-        print_piece(&pieces[curr_piece], 0);
-        putchar('\n');
-        print_piece(&pieces[curr_piece], best_rotation);
-        printf("Next piece: %c\n", piece_names[next_piece]);
-        print_piece(&pieces[next_piece], 0);
-
-        print_board(&t);
-        printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
-        printf("Best position info: ");
-        printf("holes=%d, col_transitions=%d, row_transitions=%d, wells=%d, max_height=%d\n", t.holes, t.col_transitions, t.row_transitions, t.wells, t.max_height);
-        getchar();
-
         if (t.max_height > 16 || step >= 1000000) {
             printf("Game over at step %d!\n", step);
             printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
             break;
+            }
+            curr_piece = next_piece;
+            next_piece = rand() % PIECE_TYPES;
         }
-        */
-    if (t.max_height > 16 || step >= 1000000) {
-        printf("Game over at step %d!\n", step);
-        printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
-        break;
-        }
-        curr_piece = next_piece;
-        next_piece = rand() % PIECE_TYPES;
-    }
     clock_t end_time = clock();
     double elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("Total elapsed time: %.3f seconds\n", elapsed);
