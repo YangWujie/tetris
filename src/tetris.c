@@ -377,17 +377,18 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, 
 
 int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
     int64_t score = 0;
+    if (rows_eliminated == 1 && t->max_height < 6) {
+        score -= (int64_t) ROWS_ELIMINATED * ROWS_ELIMINATED;
+    }
+    else {
+        score += (int64_t) 3 *ROWS_ELIMINATED * ROWS_ELIMINATED;
+    }
     score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
     score += (int64_t )t->landing_row * LANDING_HEIGHT;
     score += (int64_t) t->col_transitions * COL_TRANSITIONS;
     score += (int64_t) t->row_transitions * ROW_TRANSITIONS; 
     score += (int64_t) t->wells * WELL_SUMS;
     score += (int64_t) t->holes * HOLES;
-
-    if (t->max_height > 10) {
-        score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
-        score += (int64_t )t->landing_row * LANDING_HEIGHT;
-    }
 
     return score;
 }
@@ -510,19 +511,6 @@ void select_best_move_with_next_beam(
             }
         }
         int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT;
-        if (beam[i].lines_cleared == 1 && beam[i].landing_row < 5) {
-            bonus -= 5 * (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
-        }
-/*
-        if (beam[i].landing_row > 4) {
-            bonus *= 120;
-            bonus /= 100;
-        }
-        else {
-            bonus *= -22;
-            bonus /= 100;
-        }
-*/
         int64_t total_score = bonus + next_best;
         if (total_score > best_total_score) {
             best_total_score = total_score;
