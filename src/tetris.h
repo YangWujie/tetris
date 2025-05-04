@@ -33,15 +33,16 @@
 struct tetris {
     uint16_t pad0;
     uint16_t board[ROW];
-    uint16_t pad1;
     int8_t  col_height[COL + 2*COL_SHIFT];    // 每列的高度
     int8_t  max_height;        // 最高行
     int8_t  holes;             // 当前空洞数
     int8_t  row_transitions;   // 行转换数
     int8_t  col_transitions;   // 列转换数
     int8_t  wells;             // 井深度
-    int8_t  landing_row;       // 最新一块方块的落点
-    int8_t  rows_eliminated;   // 消除的行数
+    int8_t  piece;             // 当前方块类型
+    int8_t  landing_row;       // 当前方块落点
+    int8_t  rotation;          // 当前方块旋转角度
+    int8_t  rows_eliminated;   // 当前方块消除的行数
     int8_t  reserved;
 };
 

@@ -277,7 +277,6 @@ void init_tetris(struct tetris *t) {
         t->board[i] = EMPTY_ROW; // 初始化棋盘为空
     }
     t->pad0 = FULL_ROW;    // 防止用-1作为下标访问board时越界
-    t->pad1 = FULL_ROW;    // 防止用ROW作为下标访问board时越界
 }
 
 int get_piece_name(int piece) {
@@ -378,13 +377,18 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, 
 int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
     int64_t score = 0;
     if (rows_eliminated == 1 && t->max_height < 6) {
-        score -= (int64_t) ROWS_ELIMINATED * ROWS_ELIMINATED;
+        score -= (int64_t) 10 * ROWS_ELIMINATED;
     }
     else {
-        score += (int64_t) 3 *ROWS_ELIMINATED * ROWS_ELIMINATED;
+        score += (int64_t) 2 * rows_eliminated * ROWS_ELIMINATED;
     }
-    score += (int64_t) rows_eliminated * ROWS_ELIMINATED;
-    score += (int64_t )t->landing_row * LANDING_HEIGHT;
+    struct rotation *rot = &pieces[t->piece].rotations[t->rotation];
+    int lh = 0;
+    for (int i = 0; i < rot->height; i++) {
+        lh += rot->hspan[i] * (t->landing_row + i);
+    }
+    lh /= 4;
+    score += (int64_t )lh * LANDING_HEIGHT;
     score += (int64_t) t->col_transitions * COL_TRANSITIONS;
     score += (int64_t) t->row_transitions * ROW_TRANSITIONS; 
     score += (int64_t) t->wells * WELL_SUMS;
@@ -428,7 +432,10 @@ void select_best_move_with_next(
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
             int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
-            int64_t bonus = (int64_t) landing_row * LANDING_HEIGHT + (int64_t) lines_cleared * ROWS_ELIMINATED;
+            int64_t bonus = (int64_t) landing_row * LANDING_HEIGHT;
+            if (landing_row > 4) {
+                bonus += (int64_t) lines_cleared * ROWS_ELIMINATED;
+            }
 
             int64_t next_best = INT64_MIN;
             for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
