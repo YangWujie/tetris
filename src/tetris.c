@@ -509,7 +509,11 @@ void select_best_move_with_next_beam(
                 }
             }
         }
-        int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT + (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
+        int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT;
+        if (beam[i].lines_cleared == 1 && beam[i].landing_row < 5) {
+            bonus -= 4 * (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
+        }
+/*
         if (beam[i].landing_row > 4) {
             bonus *= 120;
             bonus /= 100;
@@ -518,7 +522,7 @@ void select_best_move_with_next_beam(
             bonus *= -22;
             bonus /= 100;
         }
-
+*/
         int64_t total_score = bonus + next_best;
         if (total_score > best_total_score) {
             best_total_score = total_score;
