@@ -511,7 +511,7 @@ void select_best_move_with_next_beam(
         }
         int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT;
         if (beam[i].lines_cleared == 1 && beam[i].landing_row < 5) {
-            bonus -= 4 * (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
+            bonus -= 5 * (int64_t) beam[i].lines_cleared * ROWS_ELIMINATED;
         }
 /*
         if (beam[i].landing_row > 4) {
