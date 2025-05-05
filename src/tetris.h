@@ -11,7 +11,7 @@
 #define EMPTY_CHAR      '.'
 #define FULL_CHAR       'X'
 
-#define BEAM_WIDTH 6
+#define BEAM_WIDTH 5
 
 // Pierre Dellacherie 算法评分权重
 #define WEIGHT_LANDING_HEIGHT     (-4.500158825082766)
