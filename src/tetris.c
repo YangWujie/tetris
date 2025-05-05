@@ -432,7 +432,11 @@ void select_best_move_with_next(
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
             int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
-            int64_t bonus = (int64_t) landing_row * LANDING_HEIGHT;
+            int lh = 0;
+            for (int i = 0; i < rot->height; i++) {
+                lh += rot->hspan[i] * (t->landing_row + i);
+            }
+            int64_t bonus = (int64_t) lh * LANDING_HEIGHT / 4;
             if (landing_row > 4) {
                 bonus += (int64_t) lines_cleared * ROWS_ELIMINATED;
             }
@@ -493,7 +497,12 @@ void select_best_move_with_next_beam(
                 beam[insert_pos].rotation = j;
                 beam[insert_pos].col = col;
                 beam[insert_pos].score = curr_score;
-                beam[insert_pos].landing_row = landing_row;
+                int lr = 0;
+                for (int i = 0; i < rot->height; i++) {
+                    lr += rot->hspan[i] * (landing_row + i);
+                }
+                lr /= 4;
+                beam[insert_pos].landing_row = lr;
                 beam[insert_pos].lines_cleared = lines_cleared;
                 if (beam_size < BEAM_WIDTH) beam_size++;
             }
