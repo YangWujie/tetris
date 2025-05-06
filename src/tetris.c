@@ -268,6 +268,15 @@ static inline int get_landing_row(struct tetris *t, const struct rotation *rot, 
     return row;
 }
 
+static inline int get_center_of_gravity(const struct rotation *rot, int landing_row) {
+    int cg = 0;
+    for (int i = 0; i < rot->height; i++) {
+        cg += rot->hspan[i] * (landing_row + i);
+    }
+    cg >>= 2;  // 除以4
+    return cg;
+}
+
 void init_tetris(struct tetris *t) {
     srand(time(NULL)); // 初始化随机数种子
     init_pieces();
@@ -290,17 +299,21 @@ void place_piece(struct tetris *t, const struct piece *p, int rotation, int col)
     int rows_eliminated = 0;
     const struct rotation *rot = &p->rotations[rotation];
     t->landing_row = get_landing_row(t, rot, col);
+    if (t->landing_row + rot->height > ROW) {
+        t->landing_row = -1; // 超出棋盘范围
+        return;
+    }
 
     for(int i = 0; i < rot->height; i++) {
         int r = t->landing_row + i;
-        int c = col + rot->hstart[i];
+        int cs = col + rot->hstart[i];
+        int ce = cs + rot->hspan[i];
         t->board[r] |= (rot->shape[i] << col);
         //   s1 s2 XXX s3 s4    
-        int s1 = get_status(t, r, c - 2);
-        int s2 = get_status(t, r, c - 1);
-        c += rot->hspan[i];
-        int s3 = get_status(t, r, c);
-        int s4 = get_status(t, r, c + 1);
+        int s1 = get_status(t, r, cs - 2);
+        int s2 = get_status(t, r, cs - 1);
+        int s3 = get_status(t, r, ce);
+        int s4 = get_status(t, r, ce + 1);
         if (s2 && s3) {
             if (t->board[r] != FULL_ROW) {
                 t->row_transitions--;
@@ -374,6 +387,10 @@ void place_piece(struct tetris *t, const struct piece *p, int rotation, int col)
 }
 
 int64_t evaluate_board(const struct tetris *t) {
+    if (t->landing_row == -1) {
+        return INT64_MIN;
+    }
+
     int64_t score = 0;
     if (t->rows_eliminated == 1 && t->max_height < 6) {
         score -= (int64_t) 10 * ROWS_ELIMINATED;
@@ -382,12 +399,7 @@ int64_t evaluate_board(const struct tetris *t) {
         score += (int64_t) 2 * t->rows_eliminated * ROWS_ELIMINATED;
     }
     struct rotation *rot = &pieces[t->piece].rotations[t->rotation];
-    int lh = 0;
-    for (int i = 0; i < rot->height; i++) {
-        lh += rot->hspan[i] * (t->landing_row + i);
-    }
-    lh /= 4;
-    score += (int64_t )lh * LANDING_HEIGHT;
+    score += (int64_t )get_center_of_gravity(rot, t->landing_row) * LANDING_HEIGHT;
     score += (int64_t) t->col_transitions * COL_TRANSITIONS;
     score += (int64_t) t->row_transitions * ROW_TRANSITIONS; 
     score += (int64_t) t->wells * WELL_SUMS;
@@ -401,8 +413,7 @@ void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int
     for (int j = 0; j < pieces[piece_index].count; j++) {
         const struct rotation *rot = &pieces[piece_index].rotations[j];
         for (int col = COL_SHIFT; col < COL_SHIFT + COL - rot->width + 1; col++) {
-            struct tetris temp_tetris;
-            memcpy(&temp_tetris, t, sizeof(struct tetris));
+            struct tetris temp_tetris = *t;
             place_piece(&temp_tetris, &pieces[piece_index], j, col);
             int64_t score = evaluate_board(&temp_tetris);
             if (score > best_score) {
@@ -427,11 +438,7 @@ void select_best_move_with_next(
         for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
             struct tetris temp_tetris = *t;
             place_piece(&temp_tetris, &pieces[curr_piece_index], j, col);
-            int lh = 0;
-            for (int i = 0; i < rot->height; i++) {
-                lh += rot->hspan[i] * (t->landing_row + i);
-            }
-            int64_t bonus = (int64_t) lh * LANDING_HEIGHT / 4;
+            int64_t bonus = (int64_t) get_center_of_gravity(rot, t->landing_row) * LANDING_HEIGHT / 4;
 
             int64_t next_best = INT64_MIN;
             for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
