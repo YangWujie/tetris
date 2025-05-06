@@ -40,7 +40,10 @@ void play_game() {
     clock_t start_time = clock();
     while (1) {
         int best_rotation = 0, best_col = 0, landing_row = 0;
-        select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        if (t.max_height < 7)
+            select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        else
+            select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
         if (interactive_mode) {
             print_pieces_side_by_side(best_col - 1, &pieces[curr_piece], best_rotation, &pieces[next_piece], 0);
             print_board(&t);

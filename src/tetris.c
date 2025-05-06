@@ -376,7 +376,7 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, 
 
 int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
     int64_t score = 0;
-    if (rows_eliminated == 1 && t->max_height < 6) {
+    if (rows_eliminated == 1 && t->max_height < 7) {
         score -= (int64_t) 12 * ROWS_ELIMINATED;
     }
     else {
