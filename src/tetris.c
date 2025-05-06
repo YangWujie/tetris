@@ -392,8 +392,8 @@ int64_t evaluate_board(const struct tetris *t) {
     }
 
     int64_t score = 0;
-    if (t->rows_eliminated == 1 && t->max_height < 6) {
-        score -= (int64_t) 10 * ROWS_ELIMINATED;
+    if (t->rows_eliminated == 1 && t->max_height < 10) {
+        score -= (int64_t) 12 * ROWS_ELIMINATED;
     }
     else {
         score += (int64_t) 2 * t->rows_eliminated * ROWS_ELIMINATED;
