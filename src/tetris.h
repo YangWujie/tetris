@@ -68,8 +68,6 @@ struct BeamNode {
     int rotation;
     int col;
     int64_t score;
-    int landing_row;
-    int lines_cleared;
 };
 
 void init_tetris(struct tetris *t);
@@ -89,7 +87,7 @@ void select_best_move_with_next_beam_sampleSZ(
     int *best_col
 );
 
-int  place_piece(struct tetris *t, const struct piece *p, int rotation, int col, int *landing_row);
+void  place_piece(struct tetris *t, const struct piece *p, int rotation, int col);
 
 extern struct piece pieces[];
 

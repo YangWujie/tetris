@@ -39,8 +39,8 @@ void play_game() {
     int next_piece = rand() % PIECE_TYPES;
     clock_t start_time = clock();
     while (1) {
-        int best_rotation = 0, best_col = 0, landing_row = 0;
-        if (t.max_height < 7)
+        int best_rotation = 0, best_col = 0;
+        if (t.max_height < 8)
             select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
         else
             select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
@@ -50,11 +50,11 @@ void play_game() {
             printf("Current score: %d, Total lines: %d\n", total_score, total_lines);
             getchar();
         }
-        int lines = place_piece(&t, &pieces[curr_piece], best_rotation, best_col, &landing_row);
-        total_score += SCORE_TABLE[lines];
-        total_lines += lines;
+        place_piece(&t, &pieces[curr_piece], best_rotation, best_col);
+        total_score += SCORE_TABLE[t.rows_eliminated];
+        total_lines += t.rows_eliminated;
         step++;
-        if (t.max_height > 16 || step >= 1000000) {
+        if (t.max_height > 18 || step >= 1000000) {
             printf("Game over at step %d!\n", step);
             printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
             break;

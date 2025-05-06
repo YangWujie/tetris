@@ -251,7 +251,7 @@ static void init_pieces() {
 // col:  0---15
 // row: -1---19
 // 坐标范围看起来有点奇怪，主要是为了避免边界条件判断而在棋盘周围做了填充
-// 棋盘有效状态范围是 0---19 行，3---12 列
+// 棋盘有效状态范围是 0---19 行，COL_SHIFT---COL_SHIFT+COL 列
 static inline int get_status(struct tetris *t, int row, int col) {
     return (t->board[row] & (1 << col)); // 检查该位置是否有方块
 }
@@ -286,11 +286,10 @@ int get_piece_name(int piece) {
     return piece_names[piece];
 }
 
-int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, int *landing_row) {
+void place_piece(struct tetris *t, const struct piece *p, int rotation, int col) {
     int rows_eliminated = 0;
     const struct rotation *rot = &p->rotations[rotation];
     t->landing_row = get_landing_row(t, rot, col);
-    *landing_row = t->landing_row;
 
     for(int i = 0; i < rot->height; i++) {
         int r = t->landing_row + i;
@@ -371,16 +370,16 @@ int place_piece(struct tetris *t, const struct piece *p, int rotation, int col, 
         }
     }
 
-    return rows_eliminated;
+    t->rows_eliminated = rows_eliminated;
 }
 
-int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
+int64_t evaluate_board(const struct tetris *t) {
     int64_t score = 0;
-    if (rows_eliminated == 1 && t->max_height < 6) {
+    if (t->rows_eliminated == 1 && t->max_height < 6) {
         score -= (int64_t) 10 * ROWS_ELIMINATED;
     }
     else {
-        score += (int64_t) 2 * rows_eliminated * ROWS_ELIMINATED;
+        score += (int64_t) 2 * t->rows_eliminated * ROWS_ELIMINATED;
     }
     struct rotation *rot = &pieces[t->piece].rotations[t->rotation];
     int lh = 0;
@@ -399,14 +398,13 @@ int64_t evaluate_board(const struct tetris *t, int rows_eliminated) {
 
 void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int *best_col) {
     int64_t best_score = INT64_MIN;
-    int landing_row = 0;
     for (int j = 0; j < pieces[piece_index].count; j++) {
         const struct rotation *rot = &pieces[piece_index].rotations[j];
         for (int col = COL_SHIFT; col < COL_SHIFT + COL - rot->width + 1; col++) {
             struct tetris temp_tetris;
             memcpy(&temp_tetris, t, sizeof(struct tetris));
-            int rows_eliminated = place_piece(&temp_tetris, &pieces[piece_index], j, col, &landing_row);
-            int64_t score = evaluate_board(&temp_tetris, rows_eliminated);
+            place_piece(&temp_tetris, &pieces[piece_index], j, col);
+            int64_t score = evaluate_board(&temp_tetris);
             if (score > best_score) {
                 best_score = score;
                 *best_rotation = j;
@@ -414,7 +412,6 @@ void select_best_move(struct tetris *t, int piece_index, int *best_rotation, int
             }
         }
     }
-    
 }
 
 void select_best_move_with_next(
@@ -425,30 +422,24 @@ void select_best_move_with_next(
     int *best_col
 ) {
     int64_t best_score = INT64_MIN;
-    int landing_row = 0;
     for (int j = 0; j < pieces[curr_piece_index].count; j++) {
         const struct rotation *rot = &pieces[curr_piece_index].rotations[j];
         for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
-            struct tetris temp_tetris;
-            memcpy(&temp_tetris, t, sizeof(struct tetris));
-            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
+            struct tetris temp_tetris = *t;
+            place_piece(&temp_tetris, &pieces[curr_piece_index], j, col);
             int lh = 0;
             for (int i = 0; i < rot->height; i++) {
                 lh += rot->hspan[i] * (t->landing_row + i);
             }
             int64_t bonus = (int64_t) lh * LANDING_HEIGHT / 4;
-            if (landing_row > 4) {
-                bonus += (int64_t) lines_cleared * ROWS_ELIMINATED;
-            }
 
             int64_t next_best = INT64_MIN;
             for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
                 const struct rotation *nrot = &pieces[next_piece_index].rotations[nj];
                 for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
-                    struct tetris next_tetris;
-                    memcpy(&next_tetris, &temp_tetris, sizeof(struct tetris));
-                    int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol, &landing_row);
-                    int64_t score = evaluate_board(&next_tetris, nlines_cleared);
+                    struct tetris next_tetris = temp_tetris;
+                    place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol);
+                    int64_t score = evaluate_board(&next_tetris);
                     if (score > next_best) {
                         next_best = score;
                     }
@@ -460,81 +451,10 @@ void select_best_move_with_next(
                 *best_rotation = j;
                 *best_col = col;
             }
-
         }
     }
 }
 
-
-void select_best_move_with_next_beam(
-    struct tetris *t,
-    int curr_piece_index,
-    int next_piece_index,
-    int *best_rotation,
-    int *best_col
-) {
-    struct BeamNode beam[BEAM_WIDTH];
-    int beam_size = 0;
-
-    // 1. 枚举所有当前方块的落子方式，保留前BEAM_WIDTH个
-    for (int j = 0; j < pieces[curr_piece_index].count; j++) {
-        const struct rotation *rot = &pieces[curr_piece_index].rotations[j];
-        for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
-            struct tetris temp_tetris;
-            memcpy(&temp_tetris, t, sizeof(struct tetris));
-            int landing_row = 0;
-            int lines_cleared = place_piece(&temp_tetris, &pieces[curr_piece_index], j, col, &landing_row);
-            int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
-
-            // 插入beam数组，按分数从大到小排序，保留前BEAM_WIDTH个
-            int insert_pos = beam_size;
-            while (insert_pos > 0 && beam[insert_pos-1].score < curr_score) {
-                if (insert_pos < BEAM_WIDTH) beam[insert_pos] = beam[insert_pos-1];
-                insert_pos--;
-            }
-            if (insert_pos < BEAM_WIDTH) {
-                beam[insert_pos].t = temp_tetris;
-                beam[insert_pos].rotation = j;
-                beam[insert_pos].col = col;
-                beam[insert_pos].score = curr_score;
-                int lr = 0;
-                for (int i = 0; i < rot->height; i++) {
-                    lr += rot->hspan[i] * (landing_row + i);
-                }
-                lr /= 4;
-                beam[insert_pos].landing_row = lr;
-                beam[insert_pos].lines_cleared = lines_cleared;
-                if (beam_size < BEAM_WIDTH) beam_size++;
-            }
-        }
-    }
-
-    // 2. 对每个beam节点，枚举下一个方块所有落子，取最优
-    int64_t best_total_score = INT64_MIN;
-    for (int i = 0; i < beam_size; i++) {
-        int64_t next_best = INT64_MIN;
-        for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
-            const struct rotation *nrot = &pieces[next_piece_index].rotations[nj];
-            for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
-                struct tetris next_tetris;
-                memcpy(&next_tetris, &beam[i].t, sizeof(struct tetris));
-                int landing_row = 0;
-                int nlines_cleared = place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol, &landing_row);
-                int64_t score = evaluate_board(&next_tetris, nlines_cleared);
-                if (score > next_best) {
-                    next_best = score;
-                }
-            }
-        }
-        int64_t bonus = (int64_t) beam[i].landing_row * LANDING_HEIGHT;
-        int64_t total_score = bonus + next_best;
-        if (total_score > best_total_score) {
-            best_total_score = total_score;
-            *best_rotation = beam[i].rotation;
-            *best_col = beam[i].col;
-        }
-    }
-}
 
 // 辅助函数：生成 beam 节点
 static int generate_beam(struct tetris *t, int piece_index, struct BeamNode *beam, int beam_width) {
@@ -543,9 +463,8 @@ static int generate_beam(struct tetris *t, int piece_index, struct BeamNode *bea
         const struct rotation *rot = &pieces[piece_index].rotations[i];
         for (int col = COL_SHIFT; col <= COL_SHIFT + COL - rot->width; col++) {
             struct tetris temp_tetris = *t;
-            int landing_row = 0;
-            int lines_cleared = place_piece(&temp_tetris, &pieces[piece_index], i, col, &landing_row); // 将 j 改为 i
-            int64_t curr_score = evaluate_board(&temp_tetris, lines_cleared);
+            place_piece(&temp_tetris, &pieces[piece_index], i, col);
+            int64_t curr_score = evaluate_board(&temp_tetris);
 
             // 插入 beam 数组，按分数从大到小排序，保留前 beam_width 个
             int insert_pos = beam_size;
@@ -558,13 +477,49 @@ static int generate_beam(struct tetris *t, int piece_index, struct BeamNode *bea
                 beam[insert_pos].rotation = i;
                 beam[insert_pos].col = col;
                 beam[insert_pos].score = curr_score;
-                beam[insert_pos].landing_row = landing_row;
-                beam[insert_pos].lines_cleared = lines_cleared;
                 if (beam_size < beam_width) beam_size++;
             }
         }
     }
     return beam_size;
+}
+
+void select_best_move_with_next_beam(
+    struct tetris *t,
+    int curr_piece_index,
+    int next_piece_index,
+    int *best_rotation,
+    int *best_col
+) {
+    struct BeamNode beam[BEAM_WIDTH];
+    int beam_size = 0;
+
+    // 1. 枚举所有当前方块的落子方式，保留前BEAM_WIDTH个
+    beam_size = generate_beam(t, curr_piece_index, beam, BEAM_WIDTH);
+
+    // 2. 对每个beam节点，枚举下一个方块所有落子，取最优
+    int64_t best_total_score = INT64_MIN;
+    for (int i = 0; i < beam_size; i++) {
+        int64_t next_best = INT64_MIN;
+        for (int nj = 0; nj < pieces[next_piece_index].count; nj++) {
+            const struct rotation *nrot = &pieces[next_piece_index].rotations[nj];
+            for (int ncol = COL_SHIFT; ncol <= COL_SHIFT + COL - nrot->width; ncol++) {
+                struct tetris next_tetris = beam[i].t;
+                place_piece(&next_tetris, &pieces[next_piece_index], nj, ncol);
+                int64_t score = evaluate_board(&next_tetris);
+                if (score > next_best) {
+                    next_best = score;
+                }
+            }
+        }
+        int64_t bonus = (int64_t) beam[i].t.landing_row * LANDING_HEIGHT;
+        int64_t total_score = bonus + next_best;
+        if (total_score > best_total_score) {
+            best_total_score = total_score;
+            *best_rotation = beam[i].rotation;
+            *best_col = beam[i].col;
+        }
+    }
 }
 
 // 辅助函数：采样第三步的 S 和 Z 型方块
@@ -581,9 +536,8 @@ static int64_t sample_third_step(struct tetris *t, int *third_pieces, int piece_
             const struct rotation *trot = &pieces[third_piece_index].rotations[tj];
             for (int tcol = COL_SHIFT; tcol <= COL_SHIFT + COL - trot->width; tcol++) {
                 struct tetris third_tetris = *t;
-                int landing_row = 0;
-                int tlines_cleared = place_piece(&third_tetris, &pieces[third_piece_index], tj, tcol, &landing_row);
-                int64_t score = evaluate_board(&third_tetris, tlines_cleared);
+                place_piece(&third_tetris, &pieces[third_piece_index], tj, tcol);
+                int64_t score = evaluate_board(&third_tetris);
                 
                 // 更新当前方块的最佳分数
                 if (score > best_score) {
@@ -626,7 +580,7 @@ void select_best_move_with_next_beam_sampleSZ(
         int third_pieces[2] = {5, 6};
         for (int j = 0; j < next_beam_size; j++) {
             int64_t third_avg = sample_third_step(&next_beam[j].t, third_pieces, 2);
-            int64_t bonus = (int64_t) (beam[i].landing_row + next_beam[j].landing_row) * LANDING_HEIGHT;
+            int64_t bonus = (int64_t) (beam[i].t.landing_row + next_beam[j].t.landing_row) * LANDING_HEIGHT;
             int64_t total_score = bonus + third_avg;
 
             // 更新最佳分数和第一个方块的落子位置
