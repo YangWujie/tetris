@@ -40,7 +40,7 @@ void play_game() {
     clock_t start_time = clock();
     while (1) {
         int best_rotation = 0, best_col = 0, landing_row = 0;
-        if (t.max_height < 7)
+        if (t.max_height < 8)
             select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
         else
             select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
