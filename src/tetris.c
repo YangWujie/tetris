@@ -586,9 +586,9 @@ void select_best_move_with_next_beam_sampleSZ(
         // 3. 第三步只采样 S 和 Z 型 piece（piece_index = 5 和 6）
         int third_pieces[2] = {5, 6};
         for (int j = 0; j < next_beam_size; j++) {
-            int64_t third_avg = sample_third_step(&next_beam[j].t, third_pieces, 2);
+            int64_t third = sample_third_step(&next_beam[j].t, third_pieces, 2);
             int64_t bonus = (int64_t) (beam[i].t.landing_row + next_beam[j].t.landing_row) * LANDING_HEIGHT;
-            int64_t total_score = bonus + third_avg;
+            int64_t total_score = bonus + third;
 
             // 更新最佳分数和第一个方块的落子位置
             if (total_score > best_total_score) {
