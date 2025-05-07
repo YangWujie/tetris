@@ -40,7 +40,7 @@ void play_game() {
     clock_t start_time = clock();
     while (1) {
         int best_rotation = 0, best_col = 0;
-        if (t.max_height < 11)
+        if (t.max_height < 13)
             select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
         else
             select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
@@ -54,7 +54,7 @@ void play_game() {
         total_score += SCORE_TABLE[t.rows_eliminated];
         total_lines += t.rows_eliminated;
         step++;
-        if (t.max_height > 18 || step >= 1000000) {
+        if (t.max_height >= 19 || step >= 100000) {
             printf("Game over at step %d!\n", step);
             printf("Final score: %d, Total lines: %d\n", total_score, total_lines);
             break;
@@ -66,6 +66,67 @@ void play_game() {
     double elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
     printf("Total elapsed time: %.3f seconds\n", elapsed);
 }
+
+void play_game_pta() {
+    static int piece_index[26] = {-2,-2,-2,-2,-2,-2,-2,-2,0,3,-2,4,-2,-2,2,-2,-2,-2,5,1,-2,-2,-2,-1,-2,6};
+    char *line = NULL;
+    size_t len = 0;
+    size_t nread;
+    struct tetris t;
+    init_tetris(&t);
+    int total_score = 0;
+    int total_lines = 0;
+    nread = getline(&line, &len, stdin);
+    if (nread == -1) {
+        perror("getline");
+        exit(EXIT_FAILURE);
+    }
+    int curr_piece = piece_index[line[0] - 'A'];
+    int next_piece = piece_index[line[1] - 'A'];
+    int best_rotation, best_col;
+    while (1) {
+        if (t.max_height < 13)
+            select_best_move_with_next_beam(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        else
+            select_best_move_with_next_beam_sampleSZ(&t, curr_piece, next_piece, &best_rotation, &best_col);
+        place_piece(&t, &pieces[curr_piece], best_rotation, best_col);
+        total_score += SCORE_TABLE[t.rows_eliminated];
+        total_lines += t.rows_eliminated;
+        print_board(&t);
+        printf("%d %d\n", best_rotation * 90, best_col - COL_SHIFT);
+        printf("%d\n", total_score);
+        fflush(stdout);
+        curr_piece = next_piece;
+        nread = getline(&line, &len, stdin);
+        if (nread == -1) {
+            perror("getline");
+            exit(EXIT_FAILURE);
+        }
+        next_piece = piece_index[line[0] - 'A'];
+        if (next_piece < 0)
+            break;
+    }
+
+    if (next_piece == -1) {
+        select_best_move_with_next_beam(&t, curr_piece, 0, &best_rotation, &best_col);
+        place_piece(&t, &pieces[curr_piece], best_rotation, best_col);
+        total_score += SCORE_TABLE[t.rows_eliminated];
+        print_board(&t);
+        printf("%d %d\n", best_rotation * 90, best_col - COL_SHIFT);
+        printf("%d\n", total_score);
+        fflush(stdout);
+    }
+
+    free(line);
+}
+
+/*
+int main(int argc, char *argv[]) {
+    play_game_pta();
+    return 0;
+}
+*/
+
 
 int main(int argc, char *argv[]) {
     int opt;

@@ -296,7 +296,7 @@ int get_piece_name(int piece) {
 }
 
 void place_piece(struct tetris *t, const struct piece *p, int rotation, int col) {
-    int rows_eliminated = 0;
+    t->rows_eliminated = 0;
     const struct rotation *rot = &p->rotations[rotation];
     t->landing_row = get_landing_row(t, rot, col);
     if (t->landing_row + rot->height > ROW) {
@@ -359,7 +359,7 @@ void place_piece(struct tetris *t, const struct piece *p, int rotation, int col)
             }
             t->board[t->max_height - 1] = EMPTY_ROW;
             t->max_height--;
-            rows_eliminated++;
+            t->rows_eliminated++;
 
             for (int j = COL_SHIFT; j < COL + COL_SHIFT; j++) {
                 t->col_height[j]--;
@@ -382,8 +382,6 @@ void place_piece(struct tetris *t, const struct piece *p, int rotation, int col)
             }
         }
     }
-
-    t->rows_eliminated = rows_eliminated;
 }
 
 int64_t evaluate_board(const struct tetris *t) {
@@ -392,7 +390,7 @@ int64_t evaluate_board(const struct tetris *t) {
     }
 
     int64_t score = 0;
-    if (t->rows_eliminated == 1 && t->max_height < 10) {
+    if (t->rows_eliminated == 1 && t->max_height < 11) {
         score -= (int64_t) 12 * ROWS_ELIMINATED;
     }
     else {
